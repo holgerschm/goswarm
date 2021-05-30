@@ -24,12 +24,20 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	sut.start()
 
 	parameters := <-objective.Parameters
-	objective.Result <- 0
+	objective.Result <- 7.7
 
 	assert.Equal(t, 1.1, parameters[0])
 	assert.Equal(t, 2.2, parameters[1])
 	assert.Equal(t, 3.3, parameters[2])
 	assert.Equal(t, 4.4, parameters[3])
+
+	output := <-candidateOutput
+
+	assert.Equal(t, 1.1, output.parameters[0])
+	assert.Equal(t, 2.2, output.parameters[1])
+	assert.Equal(t, 3.3, output.parameters[2])
+	assert.Equal(t, 4.4, output.parameters[3])
+	assert.Equal(t, 7.7, output.value)
 }
 
 type fakeObjective struct {

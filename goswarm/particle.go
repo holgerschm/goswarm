@@ -21,5 +21,7 @@ func (p *particle) run() {
 		upper := p.objective.GetUpperBound(i)
 		current.parameters[i] = p.rng.next(lower, upper)
 	}
-	p.objective.Evaluate(current.parameters)
+	current.value = p.objective.Evaluate(current.parameters)
+
+	p.candidateOutput <- &current
 }
