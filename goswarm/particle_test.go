@@ -15,12 +15,18 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	candidateOutput := make(chan *candidate)
 	resultOutput := make(chan *candidate)
 	rng := NewMockrandom(ctrl)
-	rng.EXPECT().next(0.0, 1.0).Return(1.1)
-	rng.EXPECT().next(-1.0, 3.0).Return(2.2)
-	rng.EXPECT().next(-2.0, 5.0).Return(3.3)
-	rng.EXPECT().next(-3.0, 7.0).Return(4.4)
+	// start position
+	rng.EXPECT().next(0.0, 10.0).Return(1.1)
+	rng.EXPECT().next(-1.0, 12.0).Return(2.2)
+	rng.EXPECT().next(-2.0, 14.0).Return(3.3)
+	rng.EXPECT().next(-3.0, 16.0).Return(4.4)
+	// start speed
+	rng.EXPECT().next(-10.0, 10.0).Return(0.0)
+	rng.EXPECT().next(-13.0, 13.0).Return(0.0)
+	rng.EXPECT().next(-16.0, 16.0).Return(0.0)
+	rng.EXPECT().next(-19.0, 19.0).Return(0.0)
 
-	sut := particle{objective, candidateInput, candidateOutput, resultOutput, rng}
+	sut := newParticle(objective, candidateInput, candidateOutput, resultOutput, rng)
 	sut.start()
 
 	parameters := <-objective.Parameters
@@ -31,6 +37,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, 3.3, parameters[2])
 	assert.Equal(t, 4.4, parameters[3])
 
+	// output first value as best
 	output := <-candidateOutput
 
 	assert.Equal(t, 1.1, output.parameters[0])
@@ -38,6 +45,8 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, 3.3, output.parameters[2])
 	assert.Equal(t, 4.4, output.parameters[3])
 	assert.Equal(t, 7.7, output.value)
+
+	close(candidateInput)
 }
 
 type fakeObjective struct {
@@ -59,7 +68,7 @@ func (f *fakeObjective) GetLowerBound(dimension int) float64 {
 }
 
 func (f *fakeObjective) GetUpperBound(dimension int) float64 {
-	return float64(1 + 2*dimension)
+	return float64(10 + 2*dimension)
 }
 
 func (f *fakeObjective) Evaluate(parameter []float64) float64 {
