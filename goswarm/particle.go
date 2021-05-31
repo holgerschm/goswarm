@@ -52,16 +52,37 @@ func (p *particle) run() {
 		p.velocity[i] = p.rng.next(lower-upper, upper-lower)
 	}
 	p.best = p.evaluateCurrent()
+	p.globalBest = p.best
 
 	p.candidateOutput <- p.best
 
-	p.globalBest = <-p.candidateInput
+	candidate := <-p.candidateInput
+	p.updateGlobalBest(candidate)
 
 	for !p.stopped {
-		p.updateVelocity()
-		p.updatePosition()
-		p.clampPosition()
-		p.evaluateCurrent()
+		select {
+		case globalCandidate := <-p.candidateInput:
+			p.updateGlobalBest(globalCandidate)
+		default:
+			p.updateVelocity()
+			p.updatePosition()
+			p.clampPosition()
+			cand := p.evaluateCurrent()
+			p.updateBest(cand)
+			p.updateGlobalBest(cand)
+		}
+	}
+}
+
+func (p *particle) updateBest(candidate *candidate) {
+	if candidate.value < p.best.value {
+		p.best = candidate
+	}
+}
+
+func (p *particle) updateGlobalBest(candidate *candidate) {
+	if candidate.value < p.globalBest.value {
+		p.globalBest = candidate
 	}
 }
 

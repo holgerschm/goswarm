@@ -53,7 +53,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 
 func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective := NewFakeObjective()
-	candidateInput := make(chan *candidate)
+	candidateInput := make(chan *candidate, 1)
 	candidateOutput := make(chan *candidate)
 	resultOutput := make(chan *candidate)
 	random := rand.New(rand.NewSource(6))
@@ -66,13 +66,13 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective.Result <- 1
 	<-candidateOutput
 
-	globalBest := candidate{make([]float64, 4), 0}
+	globalBest := &candidate{make([]float64, 4), 0}
 	globalBest.parameters[0] = localBest[0]
 	globalBest.parameters[1] = localBest[1] + 1
 	globalBest.parameters[2] = localBest[2] + 2
 	globalBest.parameters[3] = localBest[3] + 3
 
-	candidateInput <- &globalBest
+	candidateInput <- globalBest
 
 	candidates := make([][]float64, 10000)
 
@@ -93,6 +93,7 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 		// keep result
 		objective.Result <- 2
 	}
+
 	avg := calcAverage(candidates)
 	std := calcStandardDev(avg, candidates)
 	assert.InDelta(t, localBest[0], avg[0], 0.1)
@@ -104,6 +105,81 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	assert.Less(t, std[1], 3.0)
 	assert.Less(t, std[2], 10.0)
 	assert.Less(t, std[3], 20.0)
+
+	// change global optimum
+	globalBest = &candidate{make([]float64, 4), -1}
+	globalBest.parameters[0] = localBest[0]
+	globalBest.parameters[1] = localBest[1] - 1
+	globalBest.parameters[2] = localBest[2] - 2
+	globalBest.parameters[3] = localBest[3] - 3
+
+	candidateInput <- globalBest
+	<-objective.Parameters
+	objective.Result <- 2
+
+	// should be ignored
+	globalBest = &candidate{make([]float64, 4), -0.9}
+	globalBest.parameters[0] = localBest[0]
+	globalBest.parameters[1] = localBest[1] + 1
+	globalBest.parameters[2] = localBest[2] + 2
+	globalBest.parameters[3] = localBest[3] + 30
+	candidateInput <- globalBest
+
+	// swing in and check bounds
+	for i := 0; i < 100000; i++ {
+		<-objective.Parameters
+		// keep result
+		objective.Result <- 2
+	}
+
+	// sample
+	for i := 0; i < 10000; i++ {
+		candidates[i] = <-objective.Parameters
+		// keep result
+		objective.Result <- 2
+	}
+
+	avg = calcAverage(candidates)
+	std = calcStandardDev(avg, candidates)
+	assert.InDelta(t, localBest[0], avg[0], 0.1)
+	assert.InDelta(t, localBest[1]-0.5, avg[1], 0.3)
+	assert.InDelta(t, localBest[2]-1, avg[2], 0.3)
+	assert.InDelta(t, localBest[3]-1.5, avg[3], 1)
+
+	assert.Less(t, std[0], 0.0001)
+	assert.Less(t, std[1], 3.0)
+	assert.Less(t, std[2], 10.0)
+	assert.Less(t, std[3], 30.0)
+
+	// change local optimum == global optimum
+	newOptimum := <-objective.Parameters
+	objective.Result <- -2
+
+	// swing in and check bounds
+	for i := 0; i < 100000; i++ {
+		<-objective.Parameters
+		// keep result
+		objective.Result <- 2
+	}
+
+	// sample
+	for i := 0; i < 10000; i++ {
+		candidates[i] = <-objective.Parameters
+		// keep result
+		objective.Result <- 2
+	}
+
+	avg = calcAverage(candidates)
+	std = calcStandardDev(avg, candidates)
+	assert.InDelta(t, newOptimum[0], avg[0], 0.1)
+	assert.InDelta(t, newOptimum[1], avg[1], 0.1)
+	assert.InDelta(t, newOptimum[2], avg[2], 0.1)
+	assert.InDelta(t, newOptimum[3], avg[3], 0.1)
+
+	assert.Less(t, std[0], 0.0001)
+	assert.Less(t, std[1], 0.0001)
+	assert.Less(t, std[2], 0.0001)
+	assert.Less(t, std[3], 0.0001)
 
 	sut.stop()
 }
