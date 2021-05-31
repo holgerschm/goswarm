@@ -102,8 +102,8 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 
 	assert.Less(t, std[0], 0.0001)
 	assert.Less(t, std[1], 3.0)
-	assert.Less(t, std[2], 15.0)
-	assert.Less(t, std[3], 30.0)
+	assert.Less(t, std[2], 10.0)
+	assert.Less(t, std[3], 20.0)
 
 	sut.stop()
 }

@@ -75,9 +75,17 @@ func (p *particle) evaluateCurrent() *candidate {
 
 func (p *particle) updateVelocity() {
 	for i := 0; i < p.dim; i++ {
-		p.velocity[i] *= 0.8
-		p.velocity[i] += p.rng.next(0, 2)*(p.best.parameters[i]-p.position[i]) +
-			p.rng.next(0, 2)*(p.globalBest.parameters[i]-p.position[i])
+		p.velocity[i] *= 0.72985
+		p.velocity[i] += p.rng.next(0, 2.05)*(p.best.parameters[i]-p.position[i]) +
+			p.rng.next(0, 2.05)*(p.globalBest.parameters[i]-p.position[i])
+	}
+}
+
+func (p *particle) clampVelocity() {
+	for i := 0; i < p.dim; i++ {
+		diff := p.upperBound[i] - p.lowerBound[i]
+		p.velocity[i] = math.Max(p.velocity[i], -diff)
+		p.velocity[i] = math.Min(p.velocity[i], diff)
 	}
 }
 
