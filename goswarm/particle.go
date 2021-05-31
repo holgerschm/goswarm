@@ -3,29 +3,29 @@ package goswarm
 import "math"
 
 type particle struct {
-	objective       Objective
-	candidateInput  <-chan *candidate
-	candidateOutput chan<- *candidate
-	resultOutput    chan<- *candidate
-	rng             random
-	position        []float64
-	velocity        []float64
-	lowerBound      []float64
-	upperBound      []float64
-	globalBest      *candidate
-	best            *candidate
-	dim             int
-	stopped         bool
+	objective      Objective
+	candidateInput <-chan *candidate
+	output         multiplexer
+	resultOutput   chan<- *candidate
+	rng            random
+	position       []float64
+	velocity       []float64
+	lowerBound     []float64
+	upperBound     []float64
+	globalBest     *candidate
+	best           *candidate
+	dim            int
+	stopped        bool
 }
 
 func newParticle(objective Objective,
 	candidateInput <-chan *candidate,
-	candidateOutput chan<- *candidate,
+	output multiplexer,
 	resultOutput chan<- *candidate,
 	rng random) *particle {
 	return &particle{objective,
 		candidateInput,
-		candidateOutput,
+		output,
 		resultOutput,
 		rng,
 		make([]float64, objective.Dimensions()),
@@ -54,7 +54,7 @@ func (p *particle) run() {
 	p.best = p.evaluateCurrent()
 	p.globalBest = p.best
 
-	p.candidateOutput <- p.best
+	p.output.send(p.best)
 
 	candidate := <-p.candidateInput
 	p.updateGlobalBest(candidate)
@@ -77,6 +77,7 @@ func (p *particle) run() {
 func (p *particle) updateBest(candidate *candidate) {
 	if candidate.value < p.best.value {
 		p.best = candidate
+		p.output.send(candidate)
 	}
 }
 

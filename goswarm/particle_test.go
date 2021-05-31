@@ -14,7 +14,10 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 
 	objective := NewFakeObjective()
 	candidateInput := make(chan *candidate)
-	candidateOutput := make(chan *candidate)
+
+	outputChannel := make(chan *candidate)
+	outputMP := multiplexer{[]chan<- *candidate{outputChannel}}
+
 	resultOutput := make(chan *candidate)
 	rng := NewMockrandom(ctrl)
 	// start position
@@ -28,7 +31,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	rng.EXPECT().next(-140.0, 140.0).Return(0.0)
 	rng.EXPECT().next(-1471.0, 1471.0).Return(0.0)
 
-	sut := newParticle(objective, candidateInput, candidateOutput, resultOutput, rng)
+	sut := newParticle(objective, candidateInput, outputMP, resultOutput, rng)
 	sut.start()
 
 	parameters := <-objective.Parameters
@@ -40,7 +43,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, 4.4, parameters[3])
 
 	// output first value as best
-	output := <-candidateOutput
+	output := <-outputChannel
 
 	assert.Equal(t, 1.1, output.parameters[0])
 	assert.Equal(t, 2.2, output.parameters[1])
@@ -54,17 +57,18 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective := NewFakeObjective()
 	candidateInput := make(chan *candidate, 1)
-	candidateOutput := make(chan *candidate)
+	outputChannel := make(chan *candidate)
+	outputMP := multiplexer{[]chan<- *candidate{outputChannel}}
 	resultOutput := make(chan *candidate)
 	random := rand.New(rand.NewSource(6))
 	rng := &randwrapper{random}
 
-	sut := newParticle(objective, candidateInput, candidateOutput, resultOutput, rng)
+	sut := newParticle(objective, candidateInput, outputMP, resultOutput, rng)
 	sut.start()
 
 	localBest := <-objective.Parameters
 	objective.Result <- 1
-	<-candidateOutput
+	<-outputChannel
 
 	globalBest := &candidate{make([]float64, 4), 0}
 	globalBest.parameters[0] = localBest[0]
@@ -154,6 +158,10 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	// change local optimum == global optimum
 	newOptimum := <-objective.Parameters
 	objective.Result <- -2
+
+	out := <-outputChannel
+	assert.Equal(t, out.value, -2.0)
+	assert.Equal(t, out.parameters, newOptimum)
 
 	// swing in and check bounds
 	for i := 0; i < 100000; i++ {
