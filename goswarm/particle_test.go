@@ -154,7 +154,7 @@ func (f *fakeObjective) GetLowerBound(dimension int) float64 {
 }
 
 func (f *fakeObjective) GetUpperBound(dimension int) float64 {
-	return float64(10 + 2*math.Pow(float64(dimension), 6))
+	return 10.0 + 2.0*math.Pow(float64(dimension), 6)
 }
 
 func (f *fakeObjective) Evaluate(parameter []float64) float64 {
