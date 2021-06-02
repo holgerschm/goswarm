@@ -16,9 +16,8 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	candidateInput := make(chan *candidate)
 
 	outputChannel := make(chan *candidate)
-	outputMP := multiplexer{[]chan<- *candidate{outputChannel}}
+	outputMP := blockingMultiplexer{[]chan<- *candidate{outputChannel}}
 
-	resultOutput := make(chan *candidate)
 	rng := NewMockrandom(ctrl)
 	// start position
 	rng.EXPECT().next(0.0, 10.0).Return(1.1)
@@ -31,7 +30,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	rng.EXPECT().next(-140.0, 140.0).Return(0.0)
 	rng.EXPECT().next(-1471.0, 1471.0).Return(0.0)
 
-	sut := newParticle(objective, candidateInput, outputMP, resultOutput, rng)
+	sut := newParticle(objective, candidateInput, outputMP, rng)
 	sut.start()
 
 	parameters := <-objective.Parameters
@@ -50,6 +49,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, 3.3, output.parameters[2])
 	assert.Equal(t, 4.4, output.parameters[3])
 	assert.Equal(t, 7.7, output.value)
+	assert.Equal(t, int64(1), output.iteration)
 
 	sut.stop()
 }
@@ -58,19 +58,18 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective := NewFakeObjective()
 	candidateInput := make(chan *candidate, 1)
 	outputChannel := make(chan *candidate)
-	outputMP := multiplexer{[]chan<- *candidate{outputChannel}}
-	resultOutput := make(chan *candidate)
+	outputMP := blockingMultiplexer{[]chan<- *candidate{outputChannel}}
 	random := rand.New(rand.NewSource(6))
 	rng := &randwrapper{random}
 
-	sut := newParticle(objective, candidateInput, outputMP, resultOutput, rng)
+	sut := newParticle(objective, candidateInput, outputMP, rng)
 	sut.start()
 
 	localBest := <-objective.Parameters
 	objective.Result <- 1
 	<-outputChannel
 
-	globalBest := &candidate{make([]float64, 4), 0}
+	globalBest := &candidate{make([]float64, 4), 0, 0}
 	globalBest.parameters[0] = localBest[0]
 	globalBest.parameters[1] = localBest[1] + 1
 	globalBest.parameters[2] = localBest[2] + 2
@@ -111,7 +110,7 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	assert.Less(t, std[3], 20.0)
 
 	// change global optimum
-	globalBest = &candidate{make([]float64, 4), -1}
+	globalBest = &candidate{make([]float64, 4), -1, 0}
 	globalBest.parameters[0] = localBest[0]
 	globalBest.parameters[1] = localBest[1] - 1
 	globalBest.parameters[2] = localBest[2] - 2
@@ -122,7 +121,7 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective.Result <- 2
 
 	// should be ignored
-	globalBest = &candidate{make([]float64, 4), -0.9}
+	globalBest = &candidate{make([]float64, 4), -0.9, 0}
 	globalBest.parameters[0] = localBest[0]
 	globalBest.parameters[1] = localBest[1] + 1
 	globalBest.parameters[2] = localBest[2] + 2
@@ -162,6 +161,7 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	out := <-outputChannel
 	assert.Equal(t, out.value, -2.0)
 	assert.Equal(t, out.parameters, newOptimum)
+	assert.Equal(t, out.iteration, int64(220003))
 
 	// swing in and check bounds
 	for i := 0; i < 100000; i++ {
@@ -247,3 +247,18 @@ func (f *fakeObjective) Evaluate(parameter []float64) float64 {
 }
 
 var _ Objective = &fakeObjective{}
+
+type blockingMultiplexer struct {
+	outputs []chan<- *candidate
+}
+
+func (b blockingMultiplexer) send(best *candidate) {
+	for i := 0; i < len(b.outputs); i++ {
+		select {
+		case b.outputs[i] <- best:
+		default:
+		}
+	}
+}
+
+var _ multiplexer = &blockingMultiplexer{}

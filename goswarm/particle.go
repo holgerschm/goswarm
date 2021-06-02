@@ -1,12 +1,14 @@
 package goswarm
 
-import "math"
+import (
+	"math"
+	"time"
+)
 
 type particle struct {
 	objective      Objective
 	candidateInput <-chan *candidate
 	output         multiplexer
-	resultOutput   chan<- *candidate
 	rng            random
 	position       []float64
 	velocity       []float64
@@ -16,17 +18,16 @@ type particle struct {
 	best           *candidate
 	dim            int
 	stopped        bool
+	iteration      int64
 }
 
 func newParticle(objective Objective,
 	candidateInput <-chan *candidate,
 	output multiplexer,
-	resultOutput chan<- *candidate,
 	rng random) *particle {
 	return &particle{objective,
 		candidateInput,
 		output,
-		resultOutput,
 		rng,
 		make([]float64, objective.Dimensions()),
 		make([]float64, objective.Dimensions()),
@@ -35,7 +36,9 @@ func newParticle(objective Objective,
 		nil,
 		nil,
 		objective.Dimensions(),
-		false}
+		false,
+		1,
+	}
 }
 
 func (p *particle) start() {
@@ -59,17 +62,23 @@ func (p *particle) run() {
 	candidate := <-p.candidateInput
 	p.updateGlobalBest(candidate)
 
+	tick := time.Tick(1 * time.Second)
+
+	candidate = p.best
+
 	for !p.stopped {
 		select {
 		case globalCandidate := <-p.candidateInput:
 			p.updateGlobalBest(globalCandidate)
+		case <-tick:
+			p.output.send(candidate)
 		default:
 			p.updateVelocity()
 			p.updatePosition()
 			p.clampPosition()
-			cand := p.evaluateCurrent()
-			p.updateBest(cand)
-			p.updateGlobalBest(cand)
+			candidate = p.evaluateCurrent()
+			p.updateBest(candidate)
+			p.updateGlobalBest(candidate)
 		}
 	}
 }
@@ -92,6 +101,8 @@ func (p *particle) evaluateCurrent() *candidate {
 	current.parameters = make([]float64, p.dim)
 	copy(current.parameters, p.position)
 	current.value = p.objective.Evaluate(current.parameters)
+	current.iteration = p.iteration
+	p.iteration++
 	return &current
 }
 

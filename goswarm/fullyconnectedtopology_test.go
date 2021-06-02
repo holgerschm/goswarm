@@ -11,9 +11,13 @@ func TestThatItConnectsAllToAll(t *testing.T) {
 
 	assert.Equal(t, 5, sut.particleCount())
 	for i := 0; i < 5; i++ {
-		assert.Len(t, sut.getOutputs(i), 5)
+		assert.Len(t, sut.getOutputs(i), 4)
 		for j := 0; j < 5; j++ {
-			assert.Equal(t, j, sut.getOutputs(i)[j])
+			if j == i {
+				assert.NotContains(t, sut.getOutputs(i), j)
+			} else {
+				assert.Contains(t, sut.getOutputs(i), j)
+			}
 		}
 	}
 }
