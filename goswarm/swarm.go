@@ -35,6 +35,7 @@ func (s *swarm) Minimize() Candidate {
 		cand := <-globalOutput
 		if cand.Value < best.Value {
 			best = cand
+			s.logger.Log(*best)
 		}
 		for _, term := range s.terminators {
 			if term.shouldTerminate(cand) {
