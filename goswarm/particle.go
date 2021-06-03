@@ -17,7 +17,8 @@ type particle struct {
 	globalBest     *candidate
 	best           *candidate
 	dim            int
-	stopped        bool
+	stopping       bool
+	stopped        chan bool
 	iteration      int64
 	updateInterval time.Duration
 }
@@ -35,6 +36,7 @@ func newParticle(objective Objective, candidateInput <-chan *candidate, output m
 		nil,
 		objective.Dimensions(),
 		false,
+		make(chan bool),
 		1,
 		updateInterval,
 	}
@@ -45,6 +47,7 @@ func (p *particle) start() {
 }
 
 func (p *particle) run() {
+	defer close(p.stopped)
 	for i := 0; i < p.objective.Dimensions(); i++ {
 		lower := p.objective.GetLowerBound(i)
 		upper := p.objective.GetUpperBound(i)
@@ -66,7 +69,7 @@ func (p *particle) run() {
 
 	candidate := p.best
 
-	for !p.stopped {
+	for !p.stopping {
 		select {
 		case globalCandidate := <-p.candidateInput:
 			p.updateGlobalBest(globalCandidate)
@@ -136,5 +139,9 @@ func (p *particle) clampPosition() {
 }
 
 func (p *particle) stop() {
-	p.stopped = true
+	p.stopping = true
+}
+
+func (p *particle) waitForFinish() {
+	<-p.stopped
 }

@@ -22,17 +22,20 @@ func (s *swarm) optimize() candidate {
 		for j := 0; j < len(outputMap); j++ {
 			outputs = append(outputs, inputChannels[outputMap[j]])
 		}
-		particles[i] = newParticle(s.objective, inputChannels[i], &nonBlockingMultiplexer{outputs: outputs}, NewSystemRandom(), time.Second)
+		particles[i] = newParticle(s.objective, inputChannels[i], &nonBlockingMultiplexer{outputs: outputs}, NewSystemRandom(), 250*time.Millisecond)
 		particles[i].start()
 	}
 	for {
 		cand := <-globalOutput
 		for _, term := range s.terminators {
 			if term.shouldTerminate(cand) {
-				return *cand
 				for i := 0; i < len(particles); i++ {
 					particles[i].stop()
 				}
+				for i := 0; i < len(particles); i++ {
+					particles[i].waitForFinish()
+				}
+				return *cand
 			}
 		}
 	}

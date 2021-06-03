@@ -3,6 +3,7 @@ package goswarm
 import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 	"math"
 	"math/rand"
 	"testing"
@@ -10,6 +11,7 @@ import (
 )
 
 func TestThatItStartsAtARandomPosition(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -31,7 +33,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	rng.EXPECT().next(-140.0, 140.0).Return(0.0)
 	rng.EXPECT().next(-1471.0, 1471.0).Return(0.0)
 
-	sut := newParticle(objective, candidateInput, outputMP, rng, 0)
+	sut := newParticle(objective, candidateInput, outputMP, rng, time.Hour)
 	sut.start()
 
 	parameters := <-objective.Parameters
@@ -53,9 +55,12 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, int64(1), output.iteration)
 
 	sut.stop()
+	candidateInput <- &candidate{}
+	sut.waitForFinish()
 }
 
 func TestThatItMovesBetweenCandidates(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	objective := NewFakeObjective()
 	candidateInput := make(chan *candidate, 1)
 	outputChannel := make(chan *candidate)
@@ -191,6 +196,15 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	assert.Less(t, std[3], 0.0001)
 
 	sut.stop()
+	for {
+		select {
+		case <-objective.Parameters:
+			objective.Result <- 0
+		default:
+			sut.waitForFinish()
+			return
+		}
+	}
 }
 
 func calcStandardDev(avg []float64, candidates [][]float64) []float64 {

@@ -4,10 +4,14 @@ package goswarm
 
 import (
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 	"testing"
+	"time"
 )
 
 func TestThatItFindsAMinimumIn1D(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	var obj Objective
 	obj = &parabola{}
 	t1 := &iterationsTerminator{minIterations: 100000}
@@ -20,9 +24,13 @@ func TestThatItFindsAMinimumIn1D(t *testing.T) {
 
 	assert.InDelta(t, 2, result.parameters[0], 0.001)
 	assert.InDelta(t, -1, result.value, 0.001)
+
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestThatItBreaksOnMinimumValue(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	var obj Objective
 	obj = &parabola{}
 	t1 := &iterationsTerminator{minIterations: 1000000000}
@@ -34,10 +42,14 @@ func TestThatItBreaksOnMinimumValue(t *testing.T) {
 	result = sut.optimize()
 
 	assert.Less(t, result.value, 10.0)
-	assert.Less(t, result.iteration, int64(1000))
+	assert.Less(t, result.iteration, int64(1000000))
+
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestThatItFindsAGlobalMinimumIn2D(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	var obj Objective
 	obj = &levi{}
 	t1 := &iterationsTerminator{minIterations: 1000000}
@@ -50,9 +62,13 @@ func TestThatItFindsAGlobalMinimumIn2D(t *testing.T) {
 	assert.InDelta(t, 1, result.parameters[0], 0.001)
 	assert.InDelta(t, 1, result.parameters[1], 0.001)
 	assert.InDelta(t, 0, result.value, 0.001)
+
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestThatItFindsAGlobalMinimumInHigherDimensions(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	var obj Objective
 	obj = &rastrigin{}
 	t1 := &iterationsTerminator{minIterations: 1000000}
@@ -66,4 +82,6 @@ func TestThatItFindsAGlobalMinimumInHigherDimensions(t *testing.T) {
 		assert.InDelta(t, 0, result.parameters[i], 0.001)
 	}
 	assert.InDelta(t, 0, result.value, 0.001)
+
+	time.Sleep(100 * time.Millisecond)
 }
