@@ -19,12 +19,10 @@ type particle struct {
 	dim            int
 	stopped        bool
 	iteration      int64
+	updateInterval time.Duration
 }
 
-func newParticle(objective Objective,
-	candidateInput <-chan *candidate,
-	output multiplexer,
-	rng random) *particle {
+func newParticle(objective Objective, candidateInput <-chan *candidate, output multiplexer, rng random, updateInterval time.Duration) *particle {
 	return &particle{objective,
 		candidateInput,
 		output,
@@ -38,6 +36,7 @@ func newParticle(objective Objective,
 		objective.Dimensions(),
 		false,
 		1,
+		updateInterval,
 	}
 }
 
@@ -59,18 +58,19 @@ func (p *particle) run() {
 
 	p.output.send(p.best)
 
-	candidate := <-p.candidateInput
-	p.updateGlobalBest(candidate)
+	globalIn := <-p.candidateInput
+	p.updateGlobalBest(globalIn)
 
-	tick := time.Tick(1 * time.Second)
+	ticker := time.NewTicker(p.updateInterval)
+	defer ticker.Stop()
 
-	candidate = p.best
+	candidate := p.best
 
 	for !p.stopped {
 		select {
 		case globalCandidate := <-p.candidateInput:
 			p.updateGlobalBest(globalCandidate)
-		case <-tick:
+		case <-ticker.C:
 			p.output.send(candidate)
 		default:
 			p.updateVelocity()

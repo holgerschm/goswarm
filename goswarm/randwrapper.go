@@ -15,6 +15,7 @@ func (s *randwrapper) next(lower float64, upper float64) float64 {
 
 func NewSystemRandom() random {
 	rw := randwrapper{}
+	time.Sleep(time.Millisecond)
 	rw.rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return &rw
 }

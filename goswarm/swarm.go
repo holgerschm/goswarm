@@ -1,5 +1,7 @@
 package goswarm
 
+import "time"
+
 type swarm struct {
 	objective   Objective
 	topology    topology
@@ -20,7 +22,7 @@ func (s *swarm) optimize() candidate {
 		for j := 0; j < len(outputMap); j++ {
 			outputs = append(outputs, inputChannels[outputMap[j]])
 		}
-		particles[i] = newParticle(s.objective, inputChannels[i], &nonBlockingMultiplexer{outputs: outputs}, NewSystemRandom())
+		particles[i] = newParticle(s.objective, inputChannels[i], &nonBlockingMultiplexer{outputs: outputs}, NewSystemRandom(), time.Second)
 		particles[i].start()
 	}
 	for {

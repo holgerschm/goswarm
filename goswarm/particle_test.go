@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestThatItStartsAtARandomPosition(t *testing.T) {
@@ -30,7 +31,7 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	rng.EXPECT().next(-140.0, 140.0).Return(0.0)
 	rng.EXPECT().next(-1471.0, 1471.0).Return(0.0)
 
-	sut := newParticle(objective, candidateInput, outputMP, rng)
+	sut := newParticle(objective, candidateInput, outputMP, rng, 0)
 	sut.start()
 
 	parameters := <-objective.Parameters
@@ -62,7 +63,7 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	random := rand.New(rand.NewSource(6))
 	rng := &randwrapper{random}
 
-	sut := newParticle(objective, candidateInput, outputMP, rng)
+	sut := newParticle(objective, candidateInput, outputMP, rng, 1000*time.Second)
 	sut.start()
 
 	localBest := <-objective.Parameters
@@ -254,10 +255,7 @@ type blockingMultiplexer struct {
 
 func (b blockingMultiplexer) send(best *candidate) {
 	for i := 0; i < len(b.outputs); i++ {
-		select {
-		case b.outputs[i] <- best:
-		default:
-		}
+		b.outputs[i] <- best
 	}
 }
 
