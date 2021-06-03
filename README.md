@@ -12,7 +12,9 @@ The PSO method is suitable for functions with lots of local minima that cannot b
 ## Examples
 
 Define your function with bounds for all parameter dimensions:
-````
+```golang
+package main
+
 type testFunction struct {
 }
 
@@ -33,9 +35,16 @@ func (t testFunction) GetLowerBound(dimension int) float64 {
 func (t testFunction) GetUpperBound(dimension int) float64 {
     return 10
 }
-````
+```
 Run the swarm:
-````
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/holgerschm/goswarm/goswarm"
+)
+
 func main() {
 	swarm := goswarm.NewSwarmBuilder(&testFunction{}).Build()
 	result := swarm.Minimize()
@@ -44,10 +53,17 @@ func main() {
 	fmt.Println("Parameters:", result.Parameters)
 	fmt.Println("Value:", result.Value)
 }
-````
+```
 
 Or run with custom configuration:
-````
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/holgerschm/goswarm/goswarm"
+)
+
 func main() {
 	swarm := goswarm.NewSwarmBuilder(&testFunction{}).
 		TerminateAfterIterations(100).
@@ -62,7 +78,7 @@ func main() {
 	fmt.Println("Parameters:", result.Parameters)
 	fmt.Println("Value:", result.Value)
 }
-````
+```
 ## Options
 
 Topology:
