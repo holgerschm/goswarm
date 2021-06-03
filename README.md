@@ -4,7 +4,7 @@
 
 This is an implementation of the particle swarm optimization (PSO) method for golang. Each particle of the swarm runs concurrently on its own goroutine.
 It can be used to find the global minimum of an n-dimensional function.
-The PSO method is suitable for functions with lots of local minima that cannot be treated effectively by gradiend based methods.
+The PSO method is suitable for functions with lots of local minima that cannot be treated effectively by gradient based methods.
 
 ## Install
 `> go get github.com/holgerschm/goswarm`
