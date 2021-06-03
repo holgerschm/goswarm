@@ -1,14 +1,14 @@
 package goswarm
 
 type multiplexer interface {
-	send(best *candidate)
+	send(best *Candidate)
 }
 
 type nonBlockingMultiplexer struct {
-	outputs []chan<- *candidate
+	outputs []chan<- *Candidate
 }
 
-func (m *nonBlockingMultiplexer) send(best *candidate) {
+func (m *nonBlockingMultiplexer) send(best *Candidate) {
 	for i := 0; i < len(m.outputs); i++ {
 		select {
 		case m.outputs[i] <- best:

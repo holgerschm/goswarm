@@ -7,15 +7,15 @@ import (
 
 type particle struct {
 	objective      Objective
-	candidateInput <-chan *candidate
+	candidateInput <-chan *Candidate
 	output         multiplexer
 	rng            random
 	position       []float64
 	velocity       []float64
 	lowerBound     []float64
 	upperBound     []float64
-	globalBest     *candidate
-	best           *candidate
+	globalBest     *Candidate
+	best           *Candidate
 	dim            int
 	stopping       bool
 	stopped        chan bool
@@ -23,7 +23,7 @@ type particle struct {
 	updateInterval time.Duration
 }
 
-func newParticle(objective Objective, candidateInput <-chan *candidate, output multiplexer, rng random, updateInterval time.Duration) *particle {
+func newParticle(objective Objective, candidateInput <-chan *Candidate, output multiplexer, rng random, updateInterval time.Duration) *particle {
 	return &particle{objective,
 		candidateInput,
 		output,
@@ -86,25 +86,25 @@ func (p *particle) run() {
 	}
 }
 
-func (p *particle) updateBest(candidate *candidate) {
-	if candidate.value < p.best.value {
+func (p *particle) updateBest(candidate *Candidate) {
+	if candidate.Value < p.best.Value {
 		p.best = candidate
 		p.output.send(candidate)
 	}
 }
 
-func (p *particle) updateGlobalBest(candidate *candidate) {
-	if candidate.value < p.globalBest.value {
+func (p *particle) updateGlobalBest(candidate *Candidate) {
+	if candidate.Value < p.globalBest.Value {
 		p.globalBest = candidate
 	}
 }
 
-func (p *particle) evaluateCurrent() *candidate {
-	current := candidate{}
-	current.parameters = make([]float64, p.dim)
-	copy(current.parameters, p.position)
-	current.value = p.objective.Evaluate(current.parameters)
-	current.iteration = p.iteration
+func (p *particle) evaluateCurrent() *Candidate {
+	current := Candidate{}
+	current.Parameters = make([]float64, p.dim)
+	copy(current.Parameters, p.position)
+	current.Value = p.objective.Evaluate(current.Parameters)
+	current.Iteration = p.iteration
 	p.iteration++
 	return &current
 }
@@ -112,8 +112,8 @@ func (p *particle) evaluateCurrent() *candidate {
 func (p *particle) updateVelocity() {
 	for i := 0; i < p.dim; i++ {
 		p.velocity[i] *= 0.72985
-		p.velocity[i] += p.rng.next(0, 2.05)*(p.best.parameters[i]-p.position[i]) +
-			p.rng.next(0, 2.05)*(p.globalBest.parameters[i]-p.position[i])
+		p.velocity[i] += p.rng.next(0, 2.05)*(p.best.Parameters[i]-p.position[i]) +
+			p.rng.next(0, 2.05)*(p.globalBest.Parameters[i]-p.position[i])
 	}
 }
 

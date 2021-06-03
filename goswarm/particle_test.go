@@ -16,10 +16,10 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	defer ctrl.Finish()
 
 	objective := NewFakeObjective()
-	candidateInput := make(chan *candidate)
+	candidateInput := make(chan *Candidate)
 
-	outputChannel := make(chan *candidate)
-	outputMP := blockingMultiplexer{[]chan<- *candidate{outputChannel}}
+	outputChannel := make(chan *Candidate)
+	outputMP := blockingMultiplexer{[]chan<- *Candidate{outputChannel}}
 
 	rng := NewMockrandom(ctrl)
 	// start position
@@ -44,27 +44,27 @@ func TestThatItStartsAtARandomPosition(t *testing.T) {
 	assert.Equal(t, 3.3, parameters[2])
 	assert.Equal(t, 4.4, parameters[3])
 
-	// output first value as best
+	// output first Value as best
 	output := <-outputChannel
 
-	assert.Equal(t, 1.1, output.parameters[0])
-	assert.Equal(t, 2.2, output.parameters[1])
-	assert.Equal(t, 3.3, output.parameters[2])
-	assert.Equal(t, 4.4, output.parameters[3])
-	assert.Equal(t, 7.7, output.value)
-	assert.Equal(t, int64(1), output.iteration)
+	assert.Equal(t, 1.1, output.Parameters[0])
+	assert.Equal(t, 2.2, output.Parameters[1])
+	assert.Equal(t, 3.3, output.Parameters[2])
+	assert.Equal(t, 4.4, output.Parameters[3])
+	assert.Equal(t, 7.7, output.Value)
+	assert.Equal(t, int64(1), output.Iteration)
 
 	sut.stop()
-	candidateInput <- &candidate{}
+	candidateInput <- &Candidate{}
 	sut.waitForFinish()
 }
 
 func TestThatItMovesBetweenCandidates(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	objective := NewFakeObjective()
-	candidateInput := make(chan *candidate, 1)
-	outputChannel := make(chan *candidate)
-	outputMP := blockingMultiplexer{[]chan<- *candidate{outputChannel}}
+	candidateInput := make(chan *Candidate, 1)
+	outputChannel := make(chan *Candidate)
+	outputMP := blockingMultiplexer{[]chan<- *Candidate{outputChannel}}
 	random := rand.New(rand.NewSource(6))
 	rng := &randwrapper{random}
 
@@ -75,11 +75,11 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective.Result <- 1
 	<-outputChannel
 
-	globalBest := &candidate{make([]float64, 4), 0, 0}
-	globalBest.parameters[0] = localBest[0]
-	globalBest.parameters[1] = localBest[1] + 1
-	globalBest.parameters[2] = localBest[2] + 2
-	globalBest.parameters[3] = localBest[3] + 3
+	globalBest := &Candidate{make([]float64, 4), 0, 0}
+	globalBest.Parameters[0] = localBest[0]
+	globalBest.Parameters[1] = localBest[1] + 1
+	globalBest.Parameters[2] = localBest[2] + 2
+	globalBest.Parameters[3] = localBest[3] + 3
 
 	candidateInput <- globalBest
 
@@ -116,22 +116,22 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	assert.Less(t, std[3], 20.0)
 
 	// change global optimum
-	globalBest = &candidate{make([]float64, 4), -1, 0}
-	globalBest.parameters[0] = localBest[0]
-	globalBest.parameters[1] = localBest[1] - 1
-	globalBest.parameters[2] = localBest[2] - 2
-	globalBest.parameters[3] = localBest[3] - 3
+	globalBest = &Candidate{make([]float64, 4), -1, 0}
+	globalBest.Parameters[0] = localBest[0]
+	globalBest.Parameters[1] = localBest[1] - 1
+	globalBest.Parameters[2] = localBest[2] - 2
+	globalBest.Parameters[3] = localBest[3] - 3
 
 	candidateInput <- globalBest
 	<-objective.Parameters
 	objective.Result <- 2
 
 	// should be ignored
-	globalBest = &candidate{make([]float64, 4), -0.9, 0}
-	globalBest.parameters[0] = localBest[0]
-	globalBest.parameters[1] = localBest[1] + 1
-	globalBest.parameters[2] = localBest[2] + 2
-	globalBest.parameters[3] = localBest[3] + 30
+	globalBest = &Candidate{make([]float64, 4), -0.9, 0}
+	globalBest.Parameters[0] = localBest[0]
+	globalBest.Parameters[1] = localBest[1] + 1
+	globalBest.Parameters[2] = localBest[2] + 2
+	globalBest.Parameters[3] = localBest[3] + 30
 	candidateInput <- globalBest
 
 	// swing in and check bounds
@@ -165,9 +165,9 @@ func TestThatItMovesBetweenCandidates(t *testing.T) {
 	objective.Result <- -2
 
 	out := <-outputChannel
-	assert.Equal(t, out.value, -2.0)
-	assert.Equal(t, out.parameters, newOptimum)
-	assert.Equal(t, out.iteration, int64(220003))
+	assert.Equal(t, out.Value, -2.0)
+	assert.Equal(t, out.Parameters, newOptimum)
+	assert.Equal(t, out.Iteration, int64(220003))
 
 	// swing in and check bounds
 	for i := 0; i < 100000; i++ {
@@ -264,10 +264,10 @@ func (f *fakeObjective) Evaluate(parameter []float64) float64 {
 var _ Objective = &fakeObjective{}
 
 type blockingMultiplexer struct {
-	outputs []chan<- *candidate
+	outputs []chan<- *Candidate
 }
 
-func (b blockingMultiplexer) send(best *candidate) {
+func (b blockingMultiplexer) send(best *Candidate) {
 	for i := 0; i < len(b.outputs); i++ {
 		b.outputs[i] <- best
 	}

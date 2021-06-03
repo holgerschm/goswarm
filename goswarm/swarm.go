@@ -2,21 +2,25 @@ package goswarm
 
 import "time"
 
+type Swarm interface {
+	Minimize() Candidate
+}
+
 type swarm struct {
 	objective   Objective
 	topology    topology
 	terminators []terminator
 }
 
-func (s *swarm) optimize() candidate {
-	inputChannels := make([]chan *candidate, s.topology.particleCount())
-	globalOutput := make(chan *candidate, 8)
+func (s *swarm) Minimize() Candidate {
+	inputChannels := make([]chan *Candidate, s.topology.particleCount())
+	globalOutput := make(chan *Candidate, 8)
 	for i := 0; i < s.topology.particleCount(); i++ {
-		inputChannels[i] = make(chan *candidate, 10)
+		inputChannels[i] = make(chan *Candidate, 10)
 	}
 	particles := make([]*particle, s.topology.particleCount())
 	for i := 0; i < s.topology.particleCount(); i++ {
-		var outputs []chan<- *candidate
+		var outputs []chan<- *Candidate
 		outputs = append(outputs, globalOutput)
 		outputMap := s.topology.getOutputs(i)
 		for j := 0; j < len(outputMap); j++ {

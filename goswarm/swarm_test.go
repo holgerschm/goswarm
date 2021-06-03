@@ -14,16 +14,18 @@ func TestThatItFindsAMinimumIn1D(t *testing.T) {
 
 	var obj Objective
 	obj = &parabola{}
-	t1 := &iterationsTerminator{minIterations: 100000}
-	t2 := &targetValueTerminator{-100} // unreachable
 
-	sut := newSwarm(obj, newFullyConnectedTopology(20), []terminator{t1, t2})
+	builder := NewSwarmBuilder(obj).WithFullyConnectedTopology()
+	sut := builder.WithParticleCount(20).
+		TerminateAfterIterations(100000).
+		TerminateWhenBelowLimit(-100). // unreachable
+		Build()
 
-	var result candidate
-	result = sut.optimize()
+	var result Candidate
+	result = sut.Minimize()
 
-	assert.InDelta(t, 2, result.parameters[0], 0.001)
-	assert.InDelta(t, -1, result.value, 0.001)
+	assert.InDelta(t, 2, result.Parameters[0], 0.001)
+	assert.InDelta(t, -1, result.Value, 0.001)
 
 	time.Sleep(100 * time.Millisecond)
 }
@@ -33,16 +35,17 @@ func TestThatItBreaksOnMinimumValue(t *testing.T) {
 
 	var obj Objective
 	obj = &parabola{}
-	t1 := &iterationsTerminator{minIterations: 1000000000}
-	t2 := &targetValueTerminator{10} // unreachable
 
-	sut := newSwarm(obj, newFullyConnectedTopology(20), []terminator{t1, t2})
+	sut := NewSwarmBuilder(obj).
+		TerminateWhenBelowLimit(10).
+		TerminateAfterIterations(1000000000).
+		Build()
 
-	var result candidate
-	result = sut.optimize()
+	var result Candidate
+	result = sut.Minimize()
 
-	assert.Less(t, result.value, 10.0)
-	assert.Less(t, result.iteration, int64(1000000))
+	assert.Less(t, result.Value, 10.0)
+	assert.Less(t, result.Iteration, int64(1000000))
 
 	time.Sleep(100 * time.Millisecond)
 }
@@ -52,16 +55,18 @@ func TestThatItFindsAGlobalMinimumIn2D(t *testing.T) {
 
 	var obj Objective
 	obj = &levi{}
-	t1 := &iterationsTerminator{minIterations: 1000000}
 
-	sut := newSwarm(obj, newRingTopology(20), []terminator{t1})
+	sut := NewSwarmBuilder(obj).
+		WithRingTopology().
+		TerminateAfterIterations(1000000).
+		Build()
 
-	var result candidate
-	result = sut.optimize()
+	var result Candidate
+	result = sut.Minimize()
 
-	assert.InDelta(t, 1, result.parameters[0], 0.001)
-	assert.InDelta(t, 1, result.parameters[1], 0.001)
-	assert.InDelta(t, 0, result.value, 0.001)
+	assert.InDelta(t, 1, result.Parameters[0], 0.001)
+	assert.InDelta(t, 1, result.Parameters[1], 0.001)
+	assert.InDelta(t, 0, result.Value, 0.001)
 
 	time.Sleep(100 * time.Millisecond)
 }
@@ -71,17 +76,20 @@ func TestThatItFindsAGlobalMinimumInHigherDimensions(t *testing.T) {
 
 	var obj Objective
 	obj = &rastrigin{}
-	t1 := &iterationsTerminator{minIterations: 1000000}
 
-	sut := newSwarm(obj, newRingTopology(40), []terminator{t1})
+	sut := NewSwarmBuilder(obj).
+		WithRingTopology().
+		WithParticleCount(40).
+		TerminateAfterIterations(1000000).
+		Build()
 
-	var result candidate
-	result = sut.optimize()
+	var result Candidate
+	result = sut.Minimize()
 
 	for i := 0; i < obj.Dimensions(); i++ {
-		assert.InDelta(t, 0, result.parameters[i], 0.001)
+		assert.InDelta(t, 0, result.Parameters[i], 0.001)
 	}
-	assert.InDelta(t, 0, result.value, 0.001)
+	assert.InDelta(t, 0, result.Value, 0.001)
 
 	time.Sleep(100 * time.Millisecond)
 }

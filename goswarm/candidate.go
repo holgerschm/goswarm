@@ -1,7 +1,7 @@
 package goswarm
 
-type candidate struct {
-	parameters []float64
-	value      float64
-	iteration  int64
+type Candidate struct {
+	Parameters []float64
+	Value      float64
+	Iteration  int64
 }
