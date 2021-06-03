@@ -10,6 +10,7 @@ type swarm struct {
 	objective   Objective
 	topology    topology
 	terminators []terminator
+	logger      Logger
 }
 
 func (s *swarm) Minimize() Candidate {
@@ -29,8 +30,12 @@ func (s *swarm) Minimize() Candidate {
 		particles[i] = newParticle(s.objective, inputChannels[i], &nonBlockingMultiplexer{outputs: outputs}, NewSystemRandom(), 250*time.Millisecond)
 		particles[i].start()
 	}
+	best := <-globalOutput
 	for {
 		cand := <-globalOutput
+		if cand.Value < best.Value {
+			best = cand
+		}
 		for _, term := range s.terminators {
 			if term.shouldTerminate(cand) {
 				for i := 0; i < len(particles); i++ {
@@ -39,12 +44,12 @@ func (s *swarm) Minimize() Candidate {
 				for i := 0; i < len(particles); i++ {
 					particles[i].waitForFinish()
 				}
-				return *cand
+				return *best
 			}
 		}
 	}
 }
 
-func newSwarm(obj Objective, top topology, terminators []terminator) *swarm {
-	return &swarm{objective: obj, topology: top, terminators: terminators}
+func newSwarm(obj Objective, top topology, terminators []terminator, logger Logger) *swarm {
+	return &swarm{objective: obj, topology: top, terminators: terminators, logger: logger}
 }

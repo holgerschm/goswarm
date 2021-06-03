@@ -5,6 +5,7 @@ type Builder struct {
 	ringTopology   bool
 	iterationLimit int64
 	limit          *float64
+	logger         Logger
 	objective      Objective
 }
 
@@ -52,9 +53,14 @@ func (b *Builder) Build() Swarm {
 		terminators = append(terminators, &iterationsTerminator{10000})
 	}
 
-	return newSwarm(b.objective, topology, terminators)
+	return newSwarm(b.objective, topology, terminators, b.logger)
+}
+
+func (b *Builder) LogTo(logger Logger) *Builder {
+	b.logger = logger
+	return b
 }
 
 func NewSwarmBuilder(obj Objective) *Builder {
-	return &Builder{objective: obj, particleCount: 20, ringTopology: true, iterationLimit: 0}
+	return &Builder{objective: obj, particleCount: 20, ringTopology: true, iterationLimit: 0, logger: &nilLogger{}}
 }

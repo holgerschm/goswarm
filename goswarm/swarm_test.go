@@ -81,6 +81,7 @@ func TestThatItFindsAGlobalMinimumInHigherDimensions(t *testing.T) {
 		WithRingTopology().
 		WithParticleCount(40).
 		TerminateAfterIterations(1000000).
+		TerminateWhenBelowLimit(0.0001).
 		Build()
 
 	var result Candidate
